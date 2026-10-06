@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Misi Arsip Rahasia — Pencarian Sekuensial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #3b3354;
+    --pink: #ff7eb6;
+    --orange: #ff9f43;
+    --yellow: #f5c518;
+    --mint: #3fc79a;
+    --blue: #4dabf7;
+    --lilac: #9b7cf6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: 'Fredoka', 'Baloo 2', 'Comic Sans MS', 'Segoe UI', sans-serif;
+    color: var(--ink);
+    background: linear-gradient(#8fd3ff 0%, #c9ecff 55%, #fff4cf 100%);
+    background-attachment: fixed;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sun { position: fixed; top: 24px; right: 28px; width: 76px; height: 76px; border-radius: 50%;
+    background: #ffd23f; box-shadow: 0 0 0 12px rgba(255,210,63,.35), 0 0 0 26px rgba(255,210,63,.18); z-index: 0; }
+  .cloud { position: fixed; background: #fff; border-radius: 999px; opacity: .95; z-index: 0; animation: drift linear infinite; }
+  .cloud::before, .cloud::after { content: ''; position: absolute; background: #fff; border-radius: 50%; }
+  .cloud::before { width: 55%; height: 140%; top: -60%; left: 14%; }
+  .cloud::after { width: 40%; height: 110%; top: -40%; right: 12%; }
+  .c1 { width: 120px; height: 36px; top: 70px; left: -160px; animation-duration: 55s; }
+  .c2 { width: 90px; height: 28px; top: 150px; left: -160px; animation-duration: 75s; animation-delay: -30s; }
+  .c3 { width: 140px; height: 40px; top: 230px; left: -200px; animation-duration: 95s; animation-delay: -60s; }
+  @keyframes drift { to { transform: translateX(calc(100vw + 360px)); } }
+
+  .hills { position: fixed; left: 0; right: 0; bottom: 0; height: 160px; z-index: 0; pointer-events: none; }
+  .hills::before, .hills::after { content: ''; position: absolute; bottom: -70px; border-radius: 50%; }
+  .hills::before { left: -10%; width: 70%; height: 190px; background: #86e08a; }
+  .hills::after { right: -12%; width: 75%; height: 160px; background: #5fcf6b; }
+
+  .app { position: relative; z-index: 2; max-width: 740px; margin: 0 auto; padding: 16px 14px 28px; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  h1 { font-size: clamp(24px, 6vw, 36px); font-weight: 700; line-height: 1.1; text-shadow: 0 3px 0 rgba(255,255,255,.9); }
+  .hudbar { display: flex; gap: 8px; align-items: center; }
+  .pill { background: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 18px; box-shadow: 0 4px 0 rgba(0,0,0,.1); white-space: nowrap; }
+  .pill.pulse { animation: pop .5s; }
+  .iconbtn { width: 44px; height: 44px; border: 0; border-radius: 50%; background: #fff; font-size: 22px; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.1); }
+
+  .card { background: #fff; border-radius: 32px; padding: 20px; box-shadow: 0 10px 0 rgba(0,0,0,.08); border: 5px solid #fff8; }
+
+  .teacher { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 14px; }
+  .teacher svg { flex: none; width: 92px; height: auto; }
+  .eyes { transform-origin: 50px 64px; animation: blink 4s infinite; }
+  @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+  .bubble { position: relative; flex: 1; background: #fff6cf; border: 4px solid #ffd23f; border-radius: 24px;
+    padding: 12px 16px; font-size: 18px; line-height: 1.45; min-height: 64px; }
+  .bubble::before { content: ''; position: absolute; left: -14px; bottom: 22px; width: 0; height: 0;
+    border: 10px solid transparent; border-right: 14px solid #ffd23f; border-left: 0; }
+  .bubble.pop { animation: pop .45s; }
+  @keyframes pop { 0% { transform: scale(.92); } 60% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+  .scene { display: none; }
+  .scene.active { display: block; animation: slide .45s ease; }
+  @keyframes slide { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  h2 { font-size: 24px; font-weight: 700; text-align: center; margin: 4px 0 12px; }
+  .lead { text-align: center; font-size: 18px; line-height: 1.5; margin-bottom: 16px; }
+  .big { font-size: clamp(28px, 7vw, 40px); font-weight: 700; text-align: center; margin: 6px 0 10px; color: var(--pink); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px;
+    padding: 12px 24px; border: 0; border-radius: 999px; background: var(--c, var(--blue)); color: #fff;
+    font: 600 20px 'Fredoka', 'Comic Sans MS', sans-serif; cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,.22); transition: transform .12s, box-shadow .12s; text-shadow: 0 2px 0 rgba(0,0,0,.15); }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0,0,0,.22); }
+  .btn:disabled { cursor: default; opacity: .7; }
+  .btn.xl { font-size: 24px; min-height: 66px; padding: 14px 34px; }
+  .center { display: flex; justify-content: center; }
+  .choices { display: grid; gap: 14px; }
+  .choices .btn { width: 100%; text-align: left; justify-content: flex-start; }
+
+  .shake { animation: shake .45s; }
+  @keyframes shake { 0%, 100% { transform: none; } 20% { transform: translateX(-9px) rotate(-2deg); } 40% { transform: translateX(9px) rotate(2deg); }
+    60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
+
+  .hud2 { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .chip { border-radius: 20px; padding: 8px 16px; font-size: 18px; font-weight: 500; }
+  .chip b { font-size: 26px; }
+  .chip.target { background: #ffe3bf; border: 3px solid var(--orange); }
+  .chip.count { background: #e2d9ff; border: 3px solid var(--lilac); }
+
+  .shelf { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px 14px; padding: 28px 0 8px; }
+  .folder { position: relative; width: 100px; height: 120px; border: 0; background: none; cursor: pointer; font-family: inherit; }
+  .folder:disabled { cursor: default; }
+  .folder .tab { position: absolute; top: 0; left: 8px; width: 44px; height: 18px; border-radius: 10px 10px 0 0; background: var(--fc); filter: brightness(.88); }
+  .folder .body { position: absolute; top: 12px; left: 0; right: 0; bottom: 18px; background: var(--fc); border-radius: 18px;
+    box-shadow: 0 6px 0 rgba(0,0,0,.16); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    transition: transform .25s, background .3s; }
+  .eyes2 { display: flex; gap: 16px; }
+  .eyes2 i { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); display: block; }
+  .mouth { width: 22px; height: 10px; border-bottom: 4px solid var(--ink); border-radius: 0 0 22px 22px; }
+  .num { margin-top: 4px; background: #fff; border-radius: 12px; padding: 2px 8px; min-width: 62px; text-align: center; font-weight: 700; font-size: 22px; }
+  .idx { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); background: #fff; border-radius: 999px;
+    padding: 1px 10px; font-size: 13px; font-weight: 500; white-space: nowrap; box-shadow: 0 2px 0 rgba(0,0,0,.1); }
+  .folder.next .body { animation: wiggle 1s ease-in-out infinite; }
+  .folder.next::before { content: '👇'; position: absolute; top: -34px; left: 50%; font-size: 28px; animation: bounce .8s ease-in-out infinite; }
+  @keyframes wiggle { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg) scale(1.04); } }
+  @keyframes bounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -8px); } }
+  .folder.opening .body { transform: scale(1.15); }
+  .folder.wrong .body { background: #cdd6e3; }
+  .folder.wrong .mouth { border-bottom: 0; border-top: 4px solid var(--ink); border-radius: 22px 22px 0 0; margin-top: 4px; }
+  .folder.wrong { animation: shake .45s; }
+  .folder.found .body { background: #7be3b8; animation: pop .6s; }
+  .folder.found .mouth { width: 30px; height: 15px; background: #fff; }
+
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+  .opts .btn { font-size: 19px; line-height: 1.25; padding: 12px 14px; min-height: 66px; }
+  .opts .btn.good { --c: var(--mint); }
+  .opts .btn.bad { --c: #b8b5c4; }
+  .qhead { text-align: center; font-weight: 600; color: var(--lilac); margin-bottom: 4px; }
+  #qtext { font-size: 22px; line-height: 1.35; }
+
+  .slots { display: grid; gap: 8px; margin: 10px 0 12px; }
+  .slot { display: flex; align-items: center; gap: 10px; min-height: 60px; border: 3px dashed #c9c2e6; border-radius: 18px; padding: 6px 10px; background: #faf8ff; transition: background .15s, border-color .15s; }
+  .slot .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #c9c2e6; color: #fff; font-weight: 700; display: grid; place-items: center; }
+  .slot .ph { color: #b3abd3; font-size: 15px; }
+  .slot.filled .ph { display: none; }
+  .slot.over { background: #e8f3ff; border-color: var(--blue); }
+  .slot.filled { border-style: solid; border-color: #d8d2ee; background: #fff; }
+  .slot.bad { border-color: #ff6b6b; background: #fff0f0; animation: shake .45s; }
+  .slot.run { border-color: var(--yellow); background: #fff9d6; box-shadow: 0 0 0 4px rgba(245,197,24,.4); }
+  .tray { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-content: flex-start; min-height: 74px; padding: 10px; border: 3px dashed #bfe0ff; border-radius: 18px; background: #f4faff; transition: background .15s; }
+  .tray.over { background: #dcefff; }
+  .block { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; border-radius: 16px; padding: 10px 14px; background: var(--c);
+    color: #fff; font: 600 15px Consolas, 'Courier New', monospace; white-space: pre-wrap; box-shadow: 0 5px 0 rgba(0,0,0,.2); text-shadow: 0 1px 0 rgba(0,0,0,.2); max-width: 100%; outline-offset: 3px; }
+  .slot .block { flex: 1; }
+  .block.drag { position: fixed; z-index: 80; cursor: grabbing; transform: rotate(-3deg) scale(1.05); box-shadow: 0 14px 0 rgba(0,0,0,.16); opacity: .96; }
+  .locked .block { pointer-events: none; cursor: default; }
+  .runpanel { margin-top: 16px; background: #f0f9ff; border: 3px dashed var(--blue); border-radius: 20px; padding: 14px 10px 10px; }
+  .vars { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 22px; }
+  .var { background: #fff; border-radius: 14px; padding: 4px 12px; font: 600 16px Consolas, 'Courier New', monospace; box-shadow: 0 3px 0 rgba(0,0,0,.1); }
+  .var b { color: var(--pink); }
+  .minis { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+  .mini { position: relative; width: 58px; height: 54px; border-radius: 12px; background: var(--fc); display: grid; place-items: center; font-weight: 700; font-size: 15px;
+    box-shadow: 0 4px 0 rgba(0,0,0,.14); transition: transform .25s, background .3s; }
+  .mini.cur { transform: translateY(-6px) scale(1.08); }
+  .mini.cur::before { content: '🔍'; position: absolute; top: -26px; font-size: 20px; animation: bounce2 .8s ease-in-out infinite; }
+  .mini.wrong { background: #cdd6e3; }
+  .mini.found { background: #7be3b8; }
+  .runmsg { text-align: center; font-weight: 600; font-size: 17px; min-height: 26px; }
+
+  .trophy { font-size: 84px; text-align: center; animation: bounce2 1.2s ease-in-out infinite; }
+  @keyframes bounce2 { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
+  .badge { display: block; width: fit-content; margin: 6px auto 12px; background: linear-gradient(#ffe27a, #ffc83d); border: 4px solid #fff;
+    border-radius: 999px; padding: 10px 24px; font-size: 24px; font-weight: 700; box-shadow: 0 6px 0 rgba(0,0,0,.14); }
+  .summary { background: #f0f9ff; border: 3px dashed var(--blue); border-radius: 20px; padding: 12px 16px; font-size: 17px; line-height: 1.5; margin-bottom: 16px; }
+  .summary li { margin-left: 20px; }
+
+  .road { position: relative; height: 84px; margin-top: 16px; }
+  .road::after { content: ''; position: absolute; left: 0; right: 0; bottom: 8px; height: 22px; background: #6b6585; border-radius: 12px;
+    background-image: repeating-linear-gradient(90deg, #fff 0 22px, transparent 22px 44px); background-size: 100% 4px; background-repeat: no-repeat; background-position: 0 50%; }
+  .bus { position: absolute; bottom: 14px; left: 0; width: 90px; z-index: 2; transition: left 1s cubic-bezier(.5, 1.4, .5, 1); animation: drive .6s ease-in-out infinite; }
+  @keyframes drive { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+  .school { position: absolute; right: 0; bottom: 22px; font-size: 44px; z-index: 1; }
+
+  .modal { position: fixed; inset: 0; z-index: 50; background: rgba(59,51,84,.55); display: flex; align-items: center; justify-content: center; padding: 18px; }
+  .modal[hidden] { display: none; }
+  .mcard { background: #fff; border-radius: 32px; max-width: 460px; width: 100%; padding: 26px 22px; text-align: center; animation: pop .5s; box-shadow: 0 10px 0 rgba(0,0,0,.15); }
+  .memoji { font-size: 76px; line-height: 1.1; animation: bounce2 1.2s ease-in-out infinite; }
+  .mcard h2 { color: var(--pink); }
+  .mcard p { font-size: 19px; line-height: 1.5; margin-bottom: 12px; }
+  .mstar { display: inline-block; background: #fff6cf; border: 3px solid #ffd23f; border-radius: 999px; padding: 6px 18px; font-weight: 700; margin-bottom: 16px; }
+
+  .conf { position: fixed; top: -40px; font-size: 26px; pointer-events: none; z-index: 99; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(112vh) rotate(420deg); } }
+
+  footer { margin-top: 8px; text-align: center; font-size: 13px; color: #5d567a; }
+
+  @media (max-width: 520px) {
+    .card { padding: 14px; border-radius: 26px; }
+    .teacher svg { width: 70px; }
+    .bubble { font-size: 16px; padding: 10px 12px; }
+    .opts { grid-template-columns: 1fr; }
+    .folder { width: 92px; }
+    .sun { width: 52px; height: 52px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sun"></div>
+<div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+<div class="hills"></div>
+
+<div class="app">
+  <header class="top">
+    <h1 id="title" aria-label="Misi Arsip Rahasia">Misi Arsip Rahasia</h1>
+    <div class="hudbar">
+      <div class="pill" id="starPill">⭐ <span id="starCount">0</span></div>
+      <button class="iconbtn" id="muteBtn" aria-label="Suara hidup atau mati">🔊</button>
+    </div>
+  </header>
+
+  <main class="card">
+    <div class="teacher">
+      <svg viewBox="0 0 100 110" aria-hidden="true">
+        <path d="M18 110 Q18 92 50 92 Q82 92 82 110Z" fill="#ff7eb6"/>
+        <circle cx="50" cy="20" r="14" fill="#6b4226"/>
+        <circle cx="50" cy="58" r="38" fill="#6b4226"/>
+        <circle cx="50" cy="63" r="33" fill="#ffd9b8"/>
+        <path d="M17 58 Q50 4 83 58 Q70 36 50 36 Q30 36 17 58Z" fill="#6b4226"/>
+        <g class="eyes"><circle cx="38" cy="64" r="4.5" fill="#3b3354"/><circle cx="62" cy="64" r="4.5" fill="#3b3354"/></g>
+        <circle cx="30" cy="73" r="5" fill="#ff9db8" opacity=".65"/><circle cx="70" cy="73" r="5" fill="#ff9db8" opacity=".65"/>
+        <path d="M41 76 Q50 87 59 76" stroke="#c0392b" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="38" cy="64" r="10" fill="none" stroke="#ff7eb6" stroke-width="2.5"/>
+        <circle cx="62" cy="64" r="10" fill="none" stroke="#ff7eb6" stroke-width="2.5"/>
+        <path d="M48 64 H52" stroke="#ff7eb6" stroke-width="2.5"/>
+      </svg>
+      <div class="bubble pop" id="bubble">Halo! Aku Bu Rina 👋</div>
+    </div>
+
+    <section id="s-start" class="scene active">
+      <div class="big">Halo, Detektif Cilik! 🎈</div>
+      <p class="lead">Ayo naik bus petualangan dan bantu Bu Rina menemukan map rapor yang tersembunyi di lemari arsip!</p>
+      <div class="center"><button class="btn xl" style="--c:var(--pink)" id="startBtn">▶ Ayo Mulai!</button></div>
+    </section>
+
+    <section id="s-strategy" class="scene">
+      <h2>Pilih caramu mencari! 🤔</h2>
+      <div class="choices" id="choices">
+        <button class="btn" style="--c:var(--mint)" data-k="ok">🔎 Buka map satu per satu dari tumpukan paling atas</button>
+        <button class="btn" style="--c:var(--orange)" data-k="guess">🎲 Menebak posisi map secara acak</button>
+        <button class="btn" style="--c:var(--lilac)" data-k="wait">⏳ Menunggu komputer menyala lagi</button>
+      </div>
+    </section>
+
+    <section id="s-level" class="scene">
+      <div class="hud2">
+        <div class="chip target">Cari nomor induk <b id="tgt">1005</b></div>
+        <div class="chip count">Map dibuka: <b id="cnt">0</b></div>
+      </div>
+      <div class="shelf" id="shelf"></div>
+    </section>
+
+    <section id="s-quiz" class="scene">
+      <div class="qhead" id="qhead"></div>
+      <h2 id="qtext"></h2>
+      <div class="opts" id="opts"></div>
+    </section>
+
+    <section id="s-puzzle" class="scene">
+      <h2>Rakit programnya! 🧩</h2>
+      <p class="lead" style="margin-bottom:6px">Seret blok kode ke kotak bernomor sampai urutannya benar, lalu tekan Jalankan dan lihat detektif bekerja.</p>
+      <div class="slots" id="slots"></div>
+      <div class="tray" id="tray"></div>
+      <div class="center" style="margin-top:14px"><button class="btn xl" id="runBtn" style="--c:var(--mint)" disabled>▶ Jalankan program</button></div>
+      <div class="runpanel" id="runpanel" hidden>
+        <div class="vars">
+          <span class="var">posisi = <b id="vPos">?</b></span>
+          <span class="var">i = <b id="vI">?</b></span>
+          <span class="var">target = <b>1005</b></span>
+        </div>
+        <div class="minis" id="minis"></div>
+        <div class="runmsg" id="runmsg"></div>
+      </div>
+    </section>
+
+    <section id="s-end" class="scene">
+      <div class="trophy">🏆</div>
+      <h2>Misi Selesai!</h2>
+      <span class="badge">🕵️ Detektif Data</span>
+      <p class="lead" id="endMsg"></p>
+      <div class="summary">
+        <b>Yang sudah kamu pelajari:</b>
+        <ul>
+          <li>Pencarian sekuensial memeriksa data satu per satu secara berurutan.</li>
+          <li>Best case: data ada di elemen pertama, cukup 1 perbandingan.</li>
+          <li>Worst case: data ada di elemen terakhir atau tidak ada, perlu n perbandingan.</li>
+        </ul>
+      </div>
+      <div class="center"><button class="btn xl" style="--c:var(--blue)" id="againBtn">🔄 Main Lagi</button></div>
+    </section>
+  </main>
+
+  <div class="road" aria-hidden="true">
+    <svg class="bus" id="bus" viewBox="0 0 90 56">
+      <rect x="2" y="8" width="84" height="36" rx="13" fill="#ffd23f"/>
+      <rect x="9" y="14" width="16" height="14" rx="4" fill="#cdeeff"/>
+      <rect x="30" y="14" width="16" height="14" rx="4" fill="#cdeeff"/>
+      <rect x="51" y="14" width="16" height="14" rx="4" fill="#cdeeff"/>
+      <rect x="72" y="14" width="10" height="20" rx="4" fill="#cdeeff"/>
+      <rect x="2" y="34" width="84" height="5" fill="#ff9f43"/>
+      <circle cx="84" cy="38" r="3" fill="#fff"/>
+      <circle cx="24" cy="46" r="8" fill="#3b3354"/><circle cx="24" cy="46" r="3" fill="#e5e5ef"/>
+      <circle cx="66" cy="46" r="8" fill="#3b3354"/><circle cx="66" cy="46" r="3" fill="#e5e5ef"/>
+    </svg>
+    <div class="school">🏫</div>
+  </div>
+
+  <footer>Modul Ajar Informatika — Pencarian Sekuensial | Micro Teaching Haura Agnia Ramadhani Amnun</footer>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="mcard" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="memoji" id="mEmoji">🎉</div>
+    <h2 id="mTitle"></h2>
+    <p id="mText"></p>
+    <div class="mstar">⭐ +1 bintang!</div><br />
+    <button class="btn xl" id="mBtn" style="--c:var(--pink)">Lanjut ▶</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+
+  var data = [1007, 1003, 1009, 1005, 1002];
+  var COLORS = ['#ff7eb6', '#ff9f43', '#f5c518', '#3fc79a', '#4dabf7', '#9b7cf6'];
+  var FOLDER = ['#ffb3d1', '#ffd9a0', '#fff09a', '#a8ecd0', '#a9d8ff'];
+  var TOTAL_STEPS = 7, MAX_STARS = 7;
+
+  var step = 0, stars = 0, lv = 0, idx = 0, count = 0, done = false, busy = false;
+  var qi = 0, tried = false, nextSlot = 0, mistakes = 0;
+
+  var title = $('#title');
+  title.innerHTML = Array.from('Misi Arsip Rahasia').map(function (c, i) {
+    return c === ' ' ? ' ' : '<span style="color:' + COLORS[i % COLORS.length] + '">' + c + '</span>';
+  }).join('');
+
+  var ac = null, muted = false;
+  function tone(f, d, type, delay, vol) {
+    if (muted) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ac.currentTime + (delay || 0), o = ac.createOscillator(), g = ac.createGain();
+      o.type = type || 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(vol || 0.15, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + d);
+    } catch (e) {}
+  }
+  var sfx = {
+    pop: function () { tone(520, 0.12, 'triangle'); },
+    ok: function () { tone(660, 0.15, 'triangle'); tone(880, 0.25, 'triangle', 0.12); },
+    bad: function () { tone(220, 0.28, 'sawtooth', 0, 0.07); },
+    win: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.3, 'triangle', i * 0.13); }); }
+  };
+  $('#muteBtn').onclick = function () { muted = !muted; this.textContent = muted ? '🔇' : '🔊'; };
+
+  function confetti(n) {
+    var em = ['⭐', '🎈', '✨', '💖', '🍭', '🌈'];
+    for (var i = 0; i < (n || 26); i++) {
+      var s = document.createElement('span');
+      s.className = 'conf';
+      s.textContent = em[Math.floor(Math.random() * em.length)];
+      s.style.left = Math.random() * 100 + 'vw';
+      s.style.animationDuration = (1.8 + Math.random() * 1.6) + 's';
+      s.style.animationDelay = (Math.random() * 0.4) + 's';
+      document.body.appendChild(s);
+      setTimeout(function (el) { el.remove(); }, 4200, s);
+    }
+  }
+
+  function say(html) {
+    var b = $('#bubble');
+    b.innerHTML = html;
+    b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+  }
+  function addStars(n) {
+    stars += n;
+    $('#starCount').textContent = stars;
+    var p = $('#starPill'); p.classList.remove('pulse'); void p.offsetWidth; p.classList.add('pulse');
+  }
+  function moveBus() { $('#bus').style.left = 'calc((100% - 150px) * ' + (step / TOTAL_STEPS) + ')'; }
+  function show(id, st) {
+    document.querySelectorAll('.scene').forEach(function (s) { s.classList.remove('active'); });
+    $('#' + id).classList.add('active');
+    step = st; moveBus();
+  }
+
+  $('#startBtn').onclick = function () {
+    sfx.pop(); show('s-strategy', 1);
+    say('Orang tua Dimas sedang menunggu rapor anaknya! Komputer sekolah mati dan semua map di lemari ini <b>acak</b>. Apa strategimu? 🤔');
+  };
+
+  var strategyMsg = {
+    guess: 'Wah, menebak acak bisa bolak-balik tanpa hasil! Cari cara yang <b>teratur</b> ya. 😉',
+    wait: 'Orang tua Dimas tidak bisa menunggu lama! Ayo kita cari sendiri sekarang. ⏰'
+  };
+  $('#choices').onclick = function (e) {
+    var btn = e.target.closest('button'); if (!btn) return;
+    var k = btn.dataset.k;
+    if (k === 'ok') {
+      sfx.ok(); confetti(14);
+      document.querySelectorAll('#choices button').forEach(function (b) { b.disabled = true; });
+      say('Betul sekali! 🎉 Memeriksa data <b>satu per satu secara berurutan</b> disebut <b>pencarian sekuensial</b>. Ayo mulai misi!');
+      setTimeout(function () { startLevel(0); }, 2400);
+    } else {
+      sfx.bad(); btn.disabled = true;
+      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+      say(strategyMsg[k]);
+    }
+  };
+
+  var levels = [
+    {
+      target: 1005,
+      intro: 'Misi 1! Cari map milik <b>Dimas</b> dengan nomor induk <b>1005</b>. Buka map dari yang paling kiri ya! 👇',
+      found: 'Yeay, ketemu! 🎉',
+      modal: function (c) { return { emoji: '🎉', title: 'Map Dimas ketemu!', text: 'Nomor 1005 ada di map ke-4 (indeks 3). Kamu membuka <b>' + c + '</b> map sebelum ketemu.', btn: 'Misi 2 ▶' }; }
+    },
+    {
+      target: 1007,
+      intro: 'Misi 2! Sekarang cari map <b>Sari</b> dengan nomor induk <b>1007</b>. Mulai dari map pertama lagi! 👇',
+      found: 'Wow, cepat sekali! ⚡',
+      modal: function (c) { return { emoji: '⚡', title: 'Best case!', text: 'Hanya <b>' + c + '</b> kali buka! Ini disebut <b>best case</b> (kasus terbaik): data yang dicari ada di elemen pertama.', btn: 'Misi 3 ▶' }; }
+    },
+    {
+      target: 1008,
+      intro: 'Misi 3! Orang tua <b>Raka</b> mencari nomor induk <b>1008</b>. Entah ada atau tidak. Periksa semuanya ya! 👇',
+      notfound: 'Hmm, semua map sudah dibuka dan 1008 tidak ada. 🤔',
+      modal: function (c) { return { emoji: '🕵️', title: 'Worst case!', text: 'Kamu sudah membuka semua <b>' + c + '</b> map dan 1008 tidak ada. Ini <b>worst case</b> (kasus terburuk): seluruh data harus diperiksa sebelum dinyatakan gagal.', btn: 'Kuis seru ▶' }; }
+    }
+  ];
+
+  function buildShelf() {
+    var sh = $('#shelf'); sh.innerHTML = '';
+    data.forEach(function (v, i) {
+      var b = document.createElement('button');
+      b.className = 'folder'; b.id = 'f' + i;
+      b.style.setProperty('--fc', FOLDER[i % FOLDER.length]);
+      b.setAttribute('aria-label', 'Map ke-' + (i + 1));
+      b.innerHTML = '<span class="tab"></span><span class="body"><span class="eyes2"><i></i><i></i></span><span class="mouth"></span><span class="num">?</span></span><span class="idx">i = ' + i + '</span>';
+      b.onclick = function () { openFolder(i); };
+      sh.appendChild(b);
+    });
+    refresh();
+  }
+  function refresh() {
+    data.forEach(function (_, i) {
+      var b = $('#f' + i);
+      b.disabled = done || i !== idx;
+      b.classList.toggle('next', !done && i === idx);
+    });
+  }
+  function startLevel(n) {
+    lv = n; idx = 0; count = 0; done = false; busy = false;
+    show('s-level', 2 + n);
+    $('#tgt').textContent = levels[n].target;
+    $('#cnt').textContent = 0;
+    buildShelf();
+    say(levels[n].intro);
+  }
+  function openFolder(i) {
+    if (busy || done || i !== idx) return;
+    busy = true;
+    var L = levels[lv], b = $('#f' + i);
+    count++; $('#cnt').textContent = count;
+    sfx.pop(); b.classList.add('opening');
+    setTimeout(function () {
+      b.classList.remove('opening');
+      b.querySelector('.num').textContent = data[i];
+      if (data[i] === L.target) {
+        b.classList.add('found'); done = true; refresh();
+        sfx.ok(); confetti(); say(L.found);
+        setTimeout(function () { showModal(L.modal(count)); }, 1300);
+      } else {
+        b.classList.add('wrong'); sfx.bad(); idx++;
+        if (idx >= data.length) {
+          done = true; refresh(); say(L.notfound || 'Semua map sudah dibuka.');
+          setTimeout(function () { showModal(L.modal(count)); }, 1700);
+        } else {
+          refresh();
+          say('Bukan, ini <b>' + data[i] + '</b>. Ayo buka map berikutnya! 👉');
+        }
+      }
+      busy = false;
+    }, 550);
+  }
+
+  var modalAction = null;
+  function showModal(m) {
+    addStars(1);
+    $('#mEmoji').textContent = m.emoji;
+    $('#mTitle').textContent = m.title;
+    $('#mText').innerHTML = m.text;
+    $('#mBtn').textContent = m.btn;
+    $('#modal').hidden = false;
+    $('#mBtn').focus();
+  }
+  $('#mBtn').onclick = function () {
+    $('#modal').hidden = true; sfx.pop();
+    if (lv < 2) startLevel(lv + 1); else startQuiz();
+  };
+
+  var quiz = [
+    { q: 'Di Misi 1, berapa map yang kamu buka untuk menemukan 1005?', o: ['1', '3', '4', '5'], a: 2, hint: 'Hitung dari map pertama sampai ketemu.' },
+    { q: 'Kapan <b>best case</b> terjadi pada pencarian sekuensial?', o: ['Data ada di map paling akhir', 'Data ada di map pertama', 'Data tidak ada', 'Data ada di tengah'], a: 1, hint: 'Best case berarti paling cepat selesai.' },
+    { q: 'Ada 5 map. Paling banyak, berapa map yang harus dibuka (<b>worst case</b>)?', o: ['1', '2', '3', '5'], a: 3, hint: 'Worst case berarti semua map harus diperiksa.' }
+  ];
+  function startQuiz() {
+    qi = 0; show('s-quiz', 5);
+    say('Waktunya kuis seru! Ingat-ingat petualanganmu tadi ya. 🧠');
+    showQuestion();
+  }
+  function showQuestion() {
+    var Q = quiz[qi]; tried = false;
+    $('#qhead').textContent = 'Soal ' + (qi + 1) + ' dari ' + quiz.length;
+    $('#qtext').innerHTML = Q.q;
+    var box = $('#opts'); box.innerHTML = '';
+    Q.o.forEach(function (t, i) {
+      var b = document.createElement('button');
+      b.className = 'btn'; b.style.setProperty('--c', COLORS[(i + 3) % COLORS.length]);
+      b.textContent = t;
+      b.onclick = function () { answer(i, b); };
+      box.appendChild(b);
+    });
+  }
+  function answer(i, btn) {
+    var Q = quiz[qi];
+    if (i === Q.a) {
+      sfx.ok(); btn.classList.add('good');
+      document.querySelectorAll('#opts button').forEach(function (b) { b.disabled = true; });
+      if (!tried) addStars(1);
+      say(tried ? 'Betul! Terus semangat! 💪' : 'Hebat, betul di percobaan pertama! 🌟');
+      setTimeout(function () { qi++; if (qi < quiz.length) showQuestion(); else startPuzzle(); }, 1200);
+    } else {
+      tried = true; sfx.bad(); btn.classList.add('bad'); btn.disabled = true;
+      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+      say('Hampir! Coba lagi ya 💪 ' + Q.hint);
+    }
+  }
+
+  var steps = [
+    'posisi ← -1',
+    'i ← 0',
+    'ULANGI SELAMA (i < n) DAN (posisi = -1)',
+    'JIKA data[i] = target MAKA posisi ← i\nSELAIN ITU i ← i + 1',
+    'TAMPILKAN "Data ditemukan" atau\n"Data tidak ditemukan"'
+  ];
+  var hints = [
+    'Pikirkan: apa yang harus disiapkan dulu? Posisi dimulai dari <b>-1</b> (belum ketemu).',
+    'Selanjutnya, mulai memeriksa dari map yang <b>pertama</b>.',
+    'Di sini harus ada <b>pengulangan</b> selama masih ada map dan belum ketemu.',
+    'Di dalam pengulangan: <b>bandingkan</b> map dengan target, kalau belum cocok lanjut.',
+    'Terakhir, <b>umumkan hasilnya</b>.'
+  ];
+  var slotsEl, trayEl, drag = null, running = false, runToken = 0;
+
+  function startPuzzle() {
+    runToken++; running = false; mistakes = 0; drag = null;
+    show('s-puzzle', 6);
+    $('#s-puzzle').classList.remove('locked');
+    $('#runpanel').hidden = true;
+    var rb = $('#runBtn'); rb.textContent = '▶ Jalankan program'; rb.disabled = true; rb.onclick = runProgram;
+    say('Tantangan terakhir! 🧩 <b>Seret</b> blok kode ke kotak bernomor sampai urutannya benar, lalu tekan <b>Jalankan</b>.');
+    slotsEl = $('#slots'); trayEl = $('#tray');
+    slotsEl.innerHTML = ''; trayEl.innerHTML = '';
+    steps.forEach(function (_, i) {
+      var d = document.createElement('div');
+      d.className = 'slot'; d.id = 'sl' + i;
+      d.innerHTML = '<span class="n">' + (i + 1) + '</span><span class="ph">Letakkan blok di sini</span>';
+      slotsEl.appendChild(d);
+    });
+    var order = steps.map(function (_, i) { return i; });
+    do {
+      for (var j = order.length - 1; j > 0; j--) {
+        var k = Math.floor(Math.random() * (j + 1)); var t = order[j]; order[j] = order[k]; order[k] = t;
+      }
+    } while (order.every(function (v, i) { return v === i; }));
+    order.forEach(function (si, n) {
+      var b = document.createElement('div');
+      b.className = 'block'; b.dataset.id = si;
+      b.style.setProperty('--c', COLORS[n % COLORS.length]);
+      b.textContent = steps[si];
+      b.setAttribute('role', 'button'); b.tabIndex = 0;
+      b.addEventListener('pointerdown', onDown);
+      b.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBlock(b); }
+      });
+      trayEl.appendChild(b);
+    });
+    updateSlots();
+  }
+
+  function updateSlots() {
+    var all = true;
+    steps.forEach(function (_, i) {
+      var s = $('#sl' + i), has = !!s.querySelector('.block');
+      s.classList.toggle('filled', has); s.classList.remove('bad');
+      if (!has) all = false;
+    });
+    $('#runBtn').disabled = !all || running;
+  }
+  function toggleBlock(b) {
+    if (running) return;
+    if (b.parentNode === trayEl) {
+      for (var i = 0; i < steps.length; i++) {
+        var s = $('#sl' + i);
+        if (!s.querySelector('.block')) { s.appendChild(b); break; }
+      }
+    } else { trayEl.appendChild(b); }
+    sfx.pop(); updateSlots();
+  }
+  function targetAt(x, y) {
+    var els = document.elementsFromPoint(x, y);
+    for (var k = 0; k < els.length; k++) {
+      var el = els[k];
+      if (el.classList && el.classList.contains('slot')) return el;
+      if (el.id === 'tray') return el;
+    }
+    return null;
+  }
+  function highlight(t) {
+    document.querySelectorAll('.slot, .tray').forEach(function (e) { e.classList.remove('over'); });
+    if (t) t.classList.add('over');
+  }
+  function onDown(e) {
+    if (running || e.button > 0) return;
+    var b = e.currentTarget, r = b.getBoundingClientRect();
+    drag = { b: b, from: b.parentNode, sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, w: r.width, moved: false };
+    try { b.setPointerCapture(e.pointerId); } catch (_) {}
+    b.addEventListener('pointermove', onMove);
+    b.addEventListener('pointerup', onUp);
+    b.addEventListener('pointercancel', onUp);
+  }
+  function onMove(e) {
+    if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
+    var b = drag.b;
+    if (!drag.moved) { drag.moved = true; b.style.width = drag.w + 'px'; b.classList.add('drag'); sfx.pop(); }
+    b.style.left = (e.clientX - drag.ox) + 'px';
+    b.style.top = (e.clientY - drag.oy) + 'px';
+    highlight(targetAt(e.clientX, e.clientY));
+  }
+  function onUp(e) {
+    if (!drag) return;
+    var b = drag.b, d = drag; drag = null;
+    b.removeEventListener('pointermove', onMove);
+    b.removeEventListener('pointerup', onUp);
+    b.removeEventListener('pointercancel', onUp);
+    try { b.releasePointerCapture(e.pointerId); } catch (_) {}
+    highlight(null);
+    if (!d.moved) { toggleBlock(b); return; }
+    var t = e.type === 'pointercancel' ? null : targetAt(e.clientX, e.clientY);
+    b.classList.remove('drag'); b.style.width = ''; b.style.left = ''; b.style.top = '';
+    if (!t || t === d.from) { d.from.appendChild(b); }
+    else if (t.id === 'tray') { trayEl.appendChild(b); }
+    else {
+      var occ = t.querySelector('.block');
+      if (occ && occ !== b) d.from.appendChild(occ);
+      t.appendChild(b);
+    }
+    sfx.pop(); updateSlots();
+  }
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function runProgram() {
+    if (running) return;
+    var wrong = [];
+    steps.forEach(function (_, i) {
+      var b = $('#sl' + i).querySelector('.block');
+      if (!b || +b.dataset.id !== i) wrong.push(i);
+    });
+    if (wrong.length) {
+      mistakes++; sfx.bad();
+      wrong.forEach(function (i) { var s = $('#sl' + i); s.classList.remove('bad'); void s.offsetWidth; s.classList.add('bad'); });
+      say('Programmu error! 🐞 Langkah ke-' + (wrong[0] + 1) + ' belum tepat. ' + hints[wrong[0]]);
+      return;
+    }
+    simulate();
+  }
+
+  async function simulate() {
+    running = true; var token = ++runToken;
+    $('#s-puzzle').classList.add('locked');
+    $('#runBtn').disabled = true;
+    var T = 1005, pos = -1, i = 0, D = 850;
+    $('#runpanel').hidden = false;
+    var minis = $('#minis'); minis.innerHTML = '';
+    data.forEach(function (_, k) {
+      var m = document.createElement('div');
+      m.className = 'mini'; m.id = 'm' + k; m.style.setProperty('--fc', FOLDER[k % FOLDER.length]); m.textContent = '?';
+      minis.appendChild(m);
+    });
+    var msg = $('#runmsg');
+    function vars() { $('#vPos').textContent = pos; $('#vI').textContent = i; }
+    function hl(n) {
+      document.querySelectorAll('.slot').forEach(function (s) { s.classList.remove('run'); });
+      if (n >= 0) $('#sl' + n).classList.add('run');
+    }
+    function alive() { return token === runToken; }
+    $('#vPos').textContent = '?'; $('#vI').textContent = '?'; msg.textContent = '';
+    say('Program berjalan! 🚀 Lihat detektif membuka map satu per satu.');
+    $('#runpanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    hl(0); pos = -1; $('#vPos').textContent = pos; msg.textContent = 'posisi = -1 (belum ketemu)'; sfx.pop();
+    await sleep(D); if (!alive()) return;
+    hl(1); i = 0; vars(); $('#m0').classList.add('cur'); msg.textContent = 'Mulai dari map pertama (i = 0)'; sfx.pop();
+    await sleep(D); if (!alive()) return;
+    while (i < data.length && pos === -1) {
+      hl(2); msg.textContent = 'Ulangi: i = ' + i + ' < 5 dan belum ketemu'; sfx.pop();
+      await sleep(D); if (!alive()) return;
+      hl(3);
+      var m = $('#m' + i); m.textContent = data[i];
+      if (data[i] === T) {
+        pos = i; m.classList.add('found'); vars();
+        msg.textContent = data[i] + ' = ' + T + ' ✔ Ketemu! posisi ← ' + i; sfx.ok();
+      } else {
+        m.classList.add('wrong'); m.classList.remove('cur'); i++; vars();
+        if (i < data.length) $('#m' + i).classList.add('cur');
+        msg.textContent = data[i - 1] + ' bukan ' + T + ', lanjut i ← ' + i; sfx.bad();
+      }
+      await sleep(D); if (!alive()) return;
+    }
+    hl(4);
+    msg.textContent = pos !== -1 ? 'Data ditemukan pada indeks ' + pos : 'Data tidak ditemukan';
+    sfx.ok(); confetti(); addStars(1);
+    say('Programmu berjalan sempurna! 🎉 Detektif menemukan 1005 di indeks <b>' + pos + '</b>. Itulah pencarian sekuensial!');
+    running = false;
+    var rb = $('#runBtn'); rb.textContent = '🏁 Selesaikan misi'; rb.disabled = false; rb.onclick = finish;
+  }
+
+  function finish() {
+    show('s-end', 7); sfx.win(); confetti(40);
+    var m = stars >= MAX_STARS ? 'Sempurna! Kamu mengumpulkan semua bintang: ' + stars + ' dari ' + MAX_STARS + ' ⭐'
+      : stars >= 5 ? 'Hebat! Kamu mengumpulkan ' + stars + ' dari ' + MAX_STARS + ' bintang ⭐'
+      : 'Bagus! Kamu mengumpulkan ' + stars + ' dari ' + MAX_STARS + ' bintang ⭐. Main lagi untuk dapat lebih banyak!';
+    $('#endMsg').textContent = m;
+    say('Terima kasih sudah membantu! Kamu resmi jadi <b>Detektif Data</b>! 🕵️');
+  }
+
+  $('#againBtn').onclick = function () {
+    sfx.pop(); stars = 0; $('#starCount').textContent = 0;
+    show('s-start', 0);
+    document.querySelectorAll('#choices button').forEach(function (b) { b.disabled = false; b.classList.remove('shake'); });
+    say('Halo lagi! Siap untuk misi baru? 👋');
+  };
+
+  moveBus();
+})();
+</script>
+</body>
+</html>
